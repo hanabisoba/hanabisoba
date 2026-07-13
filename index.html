@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NomNom Log · AI Calorie Scanner</title>
+  <meta name="description" content="Scan your food with AI, track calories and nutrition in a cute daily tracker. Completely free.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#FFF3F6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#241C22" media="(prefers-color-scheme: dark)">
+
+  <!-- iOS home-screen support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="NomNom">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-emoji">🍜</span>
+      <div>
+        <h1>NomNom Log</h1>
+        <p id="header-date" class="header-date"></p>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ HOME / TODAY ============ -->
+    <section id="view-home" class="view" data-view="home">
+      <div class="card ring-card">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 200 200" role="img" aria-labelledby="ring-label">
+            <title id="ring-label">Calories eaten today versus target</title>
+            <circle class="ring-track" cx="100" cy="100" r="84"></circle>
+            <circle class="ring-fill" id="ring-fill" cx="100" cy="100" r="84"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-big" id="ring-remaining">–</div>
+            <div class="ring-sub" id="ring-sub">kcal left</div>
+          </div>
+        </div>
+        <div class="ring-meta">
+          <div class="ring-stat"><span class="ring-stat-num" id="stat-eaten">0</span><span class="ring-stat-label">eaten</span></div>
+          <div class="ring-stat"><span class="ring-stat-num" id="stat-target">–</span><span class="ring-stat-label">target</span></div>
+        </div>
+        <p class="mascot" id="mascot">🐣 Let's log some yummy things!</p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Macros today</h2>
+        <div id="macro-bars" class="macro-bars"></div>
+        <div id="micro-chips" class="micro-chips"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <h2 class="card-title">Today's noms</h2>
+          <button class="btn btn-small btn-ghost" id="btn-add-manual">+ add manually</button>
+        </div>
+        <ul id="food-log" class="food-log"></ul>
+        <p id="log-empty" class="empty-note">Nothing logged yet — tap <strong>Scan</strong> to snap your first meal! 📸</p>
+      </div>
+    </section>
+
+    <!-- ============ SCAN ============ -->
+    <section id="view-scan" class="view" data-view="scan" hidden>
+      <div class="card scan-card" id="scan-start">
+        <div class="scan-hero">🍱</div>
+        <h2>Scan your food</h2>
+        <p class="muted">Take a photo and the AI will guess what it is, estimate the calories &amp; nutrition, and tell you how nutritious it is.</p>
+        <label class="btn btn-primary btn-big">
+          📸 Take a photo
+          <input type="file" id="input-camera" accept="image/*" capture="environment" hidden>
+        </label>
+        <label class="btn btn-secondary btn-big">
+          🖼️ Choose from gallery
+          <input type="file" id="input-gallery" accept="image/*" hidden>
+        </label>
+        <button class="btn btn-ghost" id="btn-scan-manual">✏️ Enter manually instead</button>
+        <p class="tiny-note" id="scan-key-note" hidden>You'll need to add your Anthropic API key in <strong>Settings</strong> before scanning. Manual entry works without it!</p>
+      </div>
+
+      <div class="card" id="scan-preview" hidden>
+        <img id="preview-img" class="preview-img" alt="Your food photo">
+        <div class="btn-row">
+          <button class="btn btn-primary btn-big" id="btn-analyze">✨ Analyze with AI</button>
+          <button class="btn btn-ghost" id="btn-retake">↺ Retake</button>
+        </div>
+      </div>
+
+      <div class="card scan-loading" id="scan-loading" hidden>
+        <div class="loading-emoji" aria-hidden="true">🔍</div>
+        <p id="loading-msg">Nibbling on the pixels…</p>
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="card" id="scan-result" hidden>
+        <div class="result-head">
+          <h2 class="card-title">Looks like…</h2>
+          <span class="chip" id="result-confidence"></span>
+        </div>
+        <label class="field">
+          <span class="field-label">Food</span>
+          <input type="text" id="result-name">
+        </label>
+        <div class="portion-row">
+          <span class="field-label">Portion <span id="result-portion" class="muted"></span></span>
+          <div class="stepper">
+            <button class="stepper-btn" id="portion-minus" aria-label="Smaller portion">−</button>
+            <span id="portion-mult">1×</span>
+            <button class="stepper-btn" id="portion-plus" aria-label="Bigger portion">+</button>
+          </div>
+        </div>
+        <div class="nutri-table" id="result-nutrition"></div>
+        <div class="verdict" id="result-verdict"></div>
+        <p class="tiny-note" id="result-note"></p>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-big" id="btn-log-it">🍽️ Log it!</button>
+          <button class="btn btn-ghost" id="btn-scan-again">↺ Scan again</button>
+        </div>
+      </div>
+
+      <div class="card" id="scan-error" hidden>
+        <div class="scan-hero">😵‍💫</div>
+        <p id="scan-error-msg"></p>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btn-error-retry">Try again</button>
+          <button class="btn btn-ghost" id="btn-error-manual">Enter manually</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CALENDAR ============ -->
+    <section id="view-calendar" class="view" data-view="calendar" hidden>
+      <div class="card">
+        <div class="cal-nav">
+          <button class="btn btn-ghost btn-small" id="cal-prev" aria-label="Previous month">‹</button>
+          <h2 id="cal-title" class="card-title"></h2>
+          <button class="btn btn-ghost btn-small" id="cal-next" aria-label="Next month">›</button>
+        </div>
+        <div class="cal-grid cal-head-row">
+          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+        </div>
+        <div class="cal-grid" id="cal-grid" role="grid"></div>
+        <div class="cal-legend">
+          <span><i class="dot dot-under"></i> within target</span>
+          <span><i class="dot dot-over"></i> over target</span>
+          <span><i class="dot dot-none"></i> no entries</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Little stats</h2>
+        <div class="stat-tiles">
+          <div class="stat-tile"><span class="stat-num" id="stat-avg">–</span><span class="stat-label">avg kcal / day<br>(last 7 days)</span></div>
+          <div class="stat-tile"><span class="stat-num" id="stat-streak">–</span><span class="stat-label">day logging<br>streak 🔥</span></div>
+          <div class="stat-tile"><span class="stat-num" id="stat-protein-avg">–</span><span class="stat-label">avg protein g / day<br>(last 7 days)</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="day-detail" hidden>
+        <div class="card-title-row">
+          <h2 class="card-title" id="day-detail-title"></h2>
+          <button class="btn btn-ghost btn-small" id="day-detail-close">✕</button>
+        </div>
+        <p id="day-detail-summary" class="muted"></p>
+        <ul id="day-detail-log" class="food-log"></ul>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="view-settings" class="view" data-view="settings" hidden>
+      <div class="card">
+        <h2 class="card-title">Your goals 🎯</h2>
+        <label class="field">
+          <span class="field-label">Daily calorie target (kcal)</span>
+          <input type="number" id="set-cal-target" min="500" max="10000" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span class="field-label">Daily protein target (g) — optional</span>
+          <input type="number" id="set-protein-target" min="0" max="500" inputmode="numeric">
+        </label>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">AI scanner 🤖</h2>
+        <p class="muted">Scanning uses Claude's vision API. Your key is stored <strong>only on this device</strong> and sent only to Anthropic.</p>
+        <label class="field">
+          <span class="field-label">Anthropic API key</span>
+          <input type="password" id="set-api-key" placeholder="sk-ant-…" autocomplete="off">
+        </label>
+        <p class="tiny-note">Get a key at console.anthropic.com. Without one, manual entry still works.</p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Data 🗂️</h2>
+        <p class="muted">Everything lives in your browser — no account, no cloud, completely free.</p>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btn-demo">🌸 Load demo data</button>
+          <button class="btn btn-danger" id="btn-clear">🧹 Clear all data</button>
+        </div>
+      </div>
+
+      <div class="card about">
+        <p>Made with 🍙 — NomNom Log v1</p>
+        <p class="tiny-note">Tip: on iPhone, open in Safari → Share → <strong>Add to Home Screen</strong> to install the app.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Edit / manual entry sheet -->
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <h2 id="sheet-title" class="card-title">Add food</h2>
+      <label class="field"><span class="field-label">Name</span><input type="text" id="sheet-name" placeholder="e.g. Chicken katsu curry"></label>
+      <div class="field-grid">
+        <label class="field"><span class="field-label">Calories (kcal)</span><input type="number" id="sheet-cal" min="0" inputmode="numeric"></label>
+        <label class="field"><span class="field-label">Protein (g)</span><input type="number" id="sheet-protein" min="0" inputmode="decimal"></label>
+        <label class="field"><span class="field-label">Carbs (g)</span><input type="number" id="sheet-carbs" min="0" inputmode="decimal"></label>
+        <label class="field"><span class="field-label">Fat (g)</span><input type="number" id="sheet-fat" min="0" inputmode="decimal"></label>
+        <label class="field"><span class="field-label">Fiber (g)</span><input type="number" id="sheet-fiber" min="0" inputmode="decimal"></label>
+        <label class="field"><span class="field-label">Sugar (g)</span><input type="number" id="sheet-sugar" min="0" inputmode="decimal"></label>
+        <label class="field"><span class="field-label">Sodium (mg)</span><input type="number" id="sheet-sodium" min="0" inputmode="numeric"></label>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-big" id="sheet-save">Save 💾</button>
+        <button class="btn btn-danger" id="sheet-delete" hidden>Delete 🗑️</button>
+        <button class="btn btn-ghost" id="sheet-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <nav class="tabbar" aria-label="Main">
+    <button class="tab active" data-tab="home"><span class="tab-emoji">🏠</span>Today</button>
+    <button class="tab" data-tab="scan"><span class="tab-emoji">📸</span>Scan</button>
+    <button class="tab" data-tab="calendar"><span class="tab-emoji">🗓️</span>Calendar</button>
+    <button class="tab" data-tab="settings"><span class="tab-emoji">⚙️</span>Settings</button>
+  </nav>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
