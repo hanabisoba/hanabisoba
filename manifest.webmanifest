@@ -1,0 +1,16 @@
+{
+  "name": "NomNom Log — AI Calorie Scanner",
+  "short_name": "NomNom",
+  "description": "Scan your food with AI, track calories and nutrition in a cute daily tracker. Completely free.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF3F6",
+  "theme_color": "#FFF3F6",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
